@@ -1,0 +1,62 @@
+# =================================================
+#  SIMULACAO SOMADOR DE PONTO FLUTUANTE 
+# =================================================
+# TESTE 1: sinais iguais e expoentes proximos
+# NUM1 | 0001011001 | ~   3.14 e+0
+# NUM2 | 0000111100 | ~   1.73 e+0
+# SOMA | 0001110011 | ~   4.75 e+0
+# 
+# > RESET <
+# 
+# TESTE 2: sinais opostos
+# NUM1 | 0001110100 | ~   5.00 e+0
+# NUM2 | 1001010100 | ~ - 2.50 e+0
+# SOMA | 0001010100 | ~   2.50 e+0
+# 
+# > RESET <
+# 
+# TESTE 3: expoentes muito diferentes
+# NUM1 | 0000001000 | ~   2.50 e-1
+# NUM2 | 0010010000 | ~   8.00 e+0
+# SOMA | 0010010000 | ~   8.00 e+0
+# 
+# > RESET <
+# 
+# TESTE 4: sinais opostos com magnitudes proximas
+# NUM1 | 0001111110 | ~   7.50 e+0
+# NUM2 | 1001111110 | ~ - 7.50 e+0
+# SOMA | 1000000000 | ~   0.00 e+0
+# 
+# > RESET <
+# 
+# TESTE 5: ordem de grandeza distinta (pequeno + grande)
+# NUM1 | 0000000100 | ~   1.25 e-1
+# NUM2 | 0011110000 | ~   6.40 e+1
+# SOMA | 0011110000 | ~   6.40 e+1
+# 
+# > RESET <
+# 
+# TESTE 6: valores negativos e grandes
+# NUM1 | 1010011000 | ~ - 1.20 e+1
+# NUM2 | 1011011000 | ~ - 4.80 e+1
+# SOMA | 1011011110 | ~ - 6.00 e+1
+# 
+# > RESET <
+# 
+# TESTE 7: sinais diferentes com grandeza proxima
+# NUM1 | 0010011110 | ~   1.50 e+1
+# NUM2 | 1010011101 | ~ - 1.48 e+1
+# SOMA | 0000010000 | ~   5.00 e-1
+# 
+# > RESET <
+# 
+# TESTE 8: valores mais aleatorios e diferentes ordens de grandeza
+# NUM1 | 0001010110 | ~   2.75 e+0
+# NUM2 | 1000000001 | ~ - 3.12 e-2
+# SOMA | 0001010101 | ~   2.62 e+0
+# 
+# > RESET <
+# 
+# =================================================
+#  FIM DA SIMULACAO 
+# =================================================
