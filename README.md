@@ -59,7 +59,7 @@ Os valores são inseridos por meio dos switches `SW`, enquanto os resultados sã
 A validação foi realizada por meio de simulação no ambiente Questa, onde foram observados os resultados das operações para diferentes entradas. A imagem abaixo mostra um exemplo do comportamento do circuito durante a execução do teste.
 .
 
-![Print das Telas do Simulador com as Formas de Onda](docs\imagens\Questa_Wave_tb_v0.png)
+![Print das Telas do Simulador com as Formas de Onda](docs/imagens/Questa_Wave_tb_v0.png)
 
 Na imagem, o cursor amarelo destaca o resultado exibido nos LEDs após a inserção de dois valores de entrada. Para facilitar a análise dos resultados, foram gerados logs formatados, disponíveis em [docs/logs_tb_v0.txt](docs/logs_tb_v0.txt).
 
