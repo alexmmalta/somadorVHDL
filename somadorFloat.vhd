@@ -7,7 +7,13 @@ ENTITY somadorFloat IS
 
         KEY : IN STD_LOGIC_VECTOR(1 DOWNTO 0); -- 2 botões da placa (KEY0 e KEY1)
         SW : IN STD_LOGIC_VECTOR(9 DOWNTO 0); -- 10 switches da placa (SW0 a SW9)
-        LEDR : OUT STD_LOGIC_VECTOR(9 DOWNTO 0) -- 10 LEDs da placa (LEDR0 a LEDR9)
+        LEDR : OUT STD_LOGIC_VECTOR(9 DOWNTO 0); -- 10 LEDs da placa (LEDR0 a LEDR9)
+        HEX0 : OUT STD_LOGIC_VECTOR(6 DOWNTO 0);
+        HEX1 : OUT STD_LOGIC_VECTOR(6 DOWNTO 0);
+        HEX2 : OUT STD_LOGIC_VECTOR(6 DOWNTO 0);
+        HEX3 : OUT STD_LOGIC_VECTOR(6 DOWNTO 0);
+        HEX4 : OUT STD_LOGIC_VECTOR(6 DOWNTO 0);
+        HEX5 : OUT STD_LOGIC_VECTOR(6 DOWNTO 0)
     );
 END somadorFloat;
 
@@ -27,78 +33,150 @@ ARCHITECTURE arch OF somadorFloat IS
     SIGNAL sum : unsigned(8 DOWNTO 0); -- 1 bit extra para o carry (vai-um)
     SIGNAL lead0 : unsigned(2 DOWNTO 0);
 
-    -- MAQUINA DE ESTADOS
-    TYPE state_type IS (S_LER_N1, S_LER_N2, S_RESULTADO);
-    SIGNAL state : state_type := S_LER_N1; -- O programa começa no passo 1
+    -- Registradores de memória e acumulador
+    SIGNAL sign_in, sign_acc : STD_LOGIC := '0';
+    SIGNAL exp_in, exp_acc : STD_LOGIC_VECTOR(3 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL frac_in, frac_acc : STD_LOGIC_VECTOR(7 DOWNTO 0) := (OTHERS => '0');
 
-    -- Registradores de Memória: Vão guardar os valores lidos nas chaves físicas
+    -- Normalizacao do operando recem-lido nos switches (frac_in pode nao vir normalizado)
+    SIGNAL frac_in_raw : STD_LOGIC_VECTOR(7 DOWNTO 0);
+    SIGNAL frac_in_shifted : STD_LOGIC_VECTOR(7 DOWNTO 0);
+    SIGNAL lead0_in : unsigned(3 DOWNTO 0);
+
+    -- Registradores de Memória: Vão guardar os valores do acumulador e do operando atual
     SIGNAL sign1, sign2 : STD_LOGIC := '0';
     SIGNAL exp1, exp2 : STD_LOGIC_VECTOR(3 DOWNTO 0) := (OTHERS => '0');
     SIGNAL frac1, frac2 : STD_LOGIC_VECTOR(7 DOWNTO 0) := (OTHERS => '0');
 
-    -- Sinais que guardam o resultado da conta antes de enviar para os LEDs
+    -- Sinais que guardam o resultado da conta antes de enviar para os Displays
     SIGNAL sign_out : STD_LOGIC;
     SIGNAL exp_out : STD_LOGIC_VECTOR(3 DOWNTO 0);
     SIGNAL frac_out : STD_LOGIC_VECTOR(7 DOWNTO 0);
 
+    -- Sinais para os displays de 7 segmentos
+    SIGNAL hex_sign : STD_LOGIC_VECTOR(6 DOWNTO 0);
+    SIGNAL hex_bit7 : STD_LOGIC_VECTOR(6 DOWNTO 0);
+    SIGNAL hex_bit6 : STD_LOGIC_VECTOR(6 DOWNTO 0);
+    SIGNAL hex_bit5 : STD_LOGIC_VECTOR(6 DOWNTO 0);
+    SIGNAL hex_bit4 : STD_LOGIC_VECTOR(6 DOWNTO 0);
+    SIGNAL hex_exp : STD_LOGIC_VECTOR(6 DOWNTO 0);
+
+    -- Conversões para o display de 7 segmentos
+    FUNCTION nibble_to_7seg(d : STD_LOGIC_VECTOR(3 DOWNTO 0)) RETURN STD_LOGIC_VECTOR IS
+    BEGIN
+        CASE d IS
+            WHEN "0000" => RETURN "1000000"; -- 0
+            WHEN "0001" => RETURN "1111001"; -- 1
+            WHEN "0010" => RETURN "0100100"; -- 2
+            WHEN "0011" => RETURN "0110000"; -- 3
+            WHEN "0100" => RETURN "0011001"; -- 4
+            WHEN "0101" => RETURN "0010010"; -- 5
+            WHEN "0110" => RETURN "0000010"; -- 6
+            WHEN "0111" => RETURN "1111000"; -- 7
+            WHEN "1000" => RETURN "0000000"; -- 8
+            WHEN "1001" => RETURN "0010000"; -- 9
+            WHEN "1010" => RETURN "0001000"; -- A
+            WHEN "1011" => RETURN "0000011"; -- b
+            WHEN "1100" => RETURN "1000110"; -- C
+            WHEN "1101" => RETURN "0100001"; -- d
+            WHEN "1110" => RETURN "0000110"; -- E
+            WHEN "1111" => RETURN "0001110"; -- F
+            WHEN OTHERS => RETURN "1111111";
+        END CASE;
+    END FUNCTION nibble_to_7seg;
+
+    FUNCTION bit_to_7seg(b : STD_LOGIC) RETURN STD_LOGIC_VECTOR IS
+    BEGIN
+        IF b = '1' THEN
+            RETURN "1111001"; -- 1
+        ELSE
+            RETURN "1000000"; -- 0
+        END IF;
+    END FUNCTION bit_to_7seg;
+
+    FUNCTION sign_to_7seg(s : STD_LOGIC) RETURN STD_LOGIC_VECTOR IS
+    BEGIN
+        IF s = '1' THEN
+            RETURN "0111111"; -- -
+        ELSE
+            RETURN "1111111"; -- blank
+        END IF;
+    END FUNCTION sign_to_7seg;
+
 BEGIN
 
     -- =========================================================
-    -- MÁQUINA DE ESTADOS
+    -- CONTROLE DO ACUMULADOR
     -- =========================================================
 
-    -- Solução encontrada para para receber os dois números 
-    -- e mostrar o resultado da soma, uma coisa de cada vez
-
-    -- S_LER_N1:    Espera o primeiro número
-    -- S_LER_N2:    Espera o segundo número
-    -- S_RESULTADO: Mostra o resultado da soma
-
-    -- KEY(0) avança para o próximo estado
-    -- KEY(1) reseta a máquina de estados
+    -- KEY(0) adiciona o valor atual (entrada nos switches) à soma acumulada
+    -- KEY(1) zera a soma acumulada
 
     PROCESS (KEY)
     BEGIN
-
-        -- O botão KEY0 avança para o próximo estado
-        IF (KEY(0) = '0') THEN
-            CASE state IS
-                WHEN S_LER_N1 =>
-                    state <= S_LER_N2;
-                WHEN S_LER_N2 =>
-                    state <= S_RESULTADO;
-                WHEN S_RESULTADO =>
-                    state <= S_LER_N1;
-            END CASE;
-        END IF;
-
-        -- O botão KEY1 atua como reset
         IF (KEY(1) = '0') THEN
-            state <= S_LER_N1;
+            sign_acc <= '0';
+            exp_acc <= (OTHERS => '0');
+            frac_acc <= (OTHERS => '0');
+        ELSIF falling_edge(KEY(0)) THEN
+            sign_acc <= sign_out;
+            exp_acc <= exp_out;
+            frac_acc <= frac_out;
         END IF;
-
-        CASE state IS
-
-            WHEN S_LER_N1 =>
-                LEDR <= SW;                         -- Os leds imitam as chaves
-                sign1 <= SW(9);                     -- Chave 9 vira o sinal do num1
-                exp1 <= SW(8 DOWNTO 5);             -- Chaves 8 a 5 viram o expoente do num1
-                frac1 <= SW(4 DOWNTO 0) & "000";    -- Chaves 4 a 0 viram a fração (completada com zeros)
-
-            WHEN S_LER_N2 =>
-                LEDR <= SW;                         -- Os leds imitam as chaves
-                sign2 <= SW(9);                     -- Chave 9 vira o sinal do num2
-                exp2 <= SW(8 DOWNTO 5);             -- Chaves 8 a 5 viram o expoente do num2
-                frac2 <= SW(4 DOWNTO 0) & "000";    -- Chaves 4 a 0 viram a fração
-
-            WHEN S_RESULTADO =>
-                LEDR(9) <= sign_out;                        -- Sinal do resultado
-                LEDR(8 DOWNTO 5) <= exp_out;                -- Expoente do resultado
-                LEDR(4 DOWNTO 0) <= frac_out(7 DOWNTO 3);   -- Fração do resultado (apenas os 5 bits mais significativos)
-
-        END CASE;
-
     END PROCESS;
+
+    -- Valor atual de entrada e saída para LEDs
+    sign_in <= SW(9);
+    frac_in_raw <= SW(4 DOWNTO 0) & "000";
+    LEDR <= SW;
+
+    -- Conta os zeros a esquerda de frac_in_raw (0 a 8)
+    lead0_in <=
+        "0000" WHEN frac_in_raw(7) = '1' ELSE
+        "0001" WHEN frac_in_raw(6) = '1' ELSE
+        "0010" WHEN frac_in_raw(5) = '1' ELSE
+        "0011" WHEN frac_in_raw(4) = '1' ELSE
+        "0100" WHEN frac_in_raw(3) = '1' ELSE
+        "0101" WHEN frac_in_raw(2) = '1' ELSE
+        "0110" WHEN frac_in_raw(1) = '1' ELSE
+        "0111" WHEN frac_in_raw(0) = '1' ELSE
+        "1000"; -- fracao toda zero
+
+    WITH lead0_in SELECT
+        frac_in_shifted <=
+        frac_in_raw WHEN "0000",
+        frac_in_raw(6 DOWNTO 0) & '0' WHEN "0001",
+        frac_in_raw(5 DOWNTO 0) & "00" WHEN "0010",
+        frac_in_raw(4 DOWNTO 0) & "000" WHEN "0011",
+        frac_in_raw(3 DOWNTO 0) & "0000" WHEN "0100",
+        frac_in_raw(2 DOWNTO 0) & "00000" WHEN "0101",
+        frac_in_raw(1 DOWNTO 0) & "000000" WHEN "0110",
+        frac_in_raw(0) & "0000000" WHEN "0111",
+        "00000000" WHEN OTHERS;
+
+    -- Normaliza o operando de entrada (bit mais significativo da fracao = '1'). Sem isso, a
+    -- comparacao/subtracao abaixo pode escolher o operando errado como "maior" e estourar
+    -- por baixo numa subtracao unsigned quando SW traz uma fracao nao normalizada.
+    PROCESS (frac_in_raw, frac_in_shifted, lead0_in, SW)
+        VARIABLE exp_raw : unsigned(3 DOWNTO 0);
+    BEGIN
+        exp_raw := unsigned(SW(8 DOWNTO 5));
+        IF (frac_in_raw = "00000000") OR (lead0_in > exp_raw) THEN
+            exp_in <= (OTHERS => '0');
+            frac_in <= (OTHERS => '0');
+        ELSE
+            exp_in <= STD_LOGIC_VECTOR(exp_raw - lead0_in);
+            frac_in <= frac_in_shifted;
+        END IF;
+    END PROCESS;
+
+    -- Operando maior e menor usados pelo somador
+    sign1 <= sign_acc;
+    exp1 <= exp_acc;
+    frac1 <= frac_acc;
+    sign2 <= sign_in;
+    exp2 <= exp_in;
+    frac2 <= frac_in;
 
     -- =========================================================
     -- O SOMADOR DE PONTO FLUTUANTE
@@ -173,7 +251,10 @@ BEGIN
     -- 4.3: Ajusta o expoente final dependendo se houve "vai-um" ou se zerou
     PROCESS (sum, sum_norm, expb, lead0)
     BEGIN
-        IF sum(8) = '1' THEN
+        IF sum = "000000000" THEN -- Cancelamento exato, zero canonico            
+            expn <= (OTHERS => '0');
+            fracn <= (OTHERS => '0');
+        ELSIF sum(8) = '1' THEN
             -- Com carry out: incrementa expoente e desloca frac para a direita
             expn <= expb + 1;
             fracn <= sum(8 DOWNTO 1);
@@ -190,8 +271,23 @@ BEGIN
 
 
     -- Atribuição das saídas
-    sign_out <= signb;
+    sign_out <= '0' WHEN sum = "000000000" ELSE signb;
     exp_out <= STD_LOGIC_VECTOR(expn);
     frac_out <= STD_LOGIC_VECTOR(fracn);
+
+    -- Conversão dos resultados para os displays de 7 segmentos
+    hex_sign <= sign_to_7seg(sign_acc);
+    hex_bit7 <= bit_to_7seg(frac_acc(7));
+    hex_bit6 <= bit_to_7seg(frac_acc(6));
+    hex_bit5 <= bit_to_7seg(frac_acc(5));
+    hex_bit4 <= bit_to_7seg(frac_acc(4));
+    hex_exp <= nibble_to_7seg(exp_acc);
+
+    HEX5 <= hex_sign;
+    HEX4 <= hex_bit7;
+    HEX3 <= hex_bit6;
+    HEX2 <= hex_bit5;
+    HEX1 <= hex_bit4;
+    HEX0 <= hex_exp;
 
 END arch;
