@@ -2,7 +2,7 @@
 
 # Tutorial: Implementação de Somador Ponto Flutuante na DE10-Lite
 
-**Autores:** Alex de Marins Malta, [Nome do Aluno 2]
+**Autores:** Alex de Marins Malta, Renato Sassaqui Moreira
 
 **Disciplina:** Sistemas Digitais Q2.2026
 
