@@ -2,7 +2,7 @@
 
 # Tutorial: Implementação de Somador Ponto Flutuante na DE10-Lite
 
-**Autores:** Alex de Marins Malta, [Nome do Aluno 2]
+**Autores:** Alex de Marins Malta, Renato Sassaqui Moreira
 
 **Disciplina:** Sistemas Digitais Q2.2026
 
@@ -129,6 +129,5 @@ A maior vantagem observada esteve na geração do testbench. Com o auxílio da I
 
 ## 6. Contribuição dos participantes
 Utilize a taxonomia CRediT, seguem exemplos:
- * [Nome do Aluno 1], Administração do Projeto, Desenvolvimento, implementação e teste de software, Análise Formal
- * [Nome do Aluno 2], Validação de dados e experimentos
- * [Nome do Aluno 3], Redação do manuscrito original, Validação de dados e experimentos
+ * Alex de Martins Malta, Administração do Projeto, Desenvolvimento, implementação e teste de software, Análise Formal, Criação de planilha auxiliar de testes.
+ * Renato S. Moreira, Validação de dados e experimentos, Code review
