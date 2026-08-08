@@ -129,5 +129,5 @@ A maior vantagem observada esteve na geração do testbench. Com o auxílio da I
 
 ## 6. Contribuição dos participantes
 Utilize a taxonomia CRediT, seguem exemplos:
- * Alex de Martins Malta, Administração do Projeto, Desenvolvimento, implementação e teste de software, Análise Formal
+ * Alex de Martins Malta, Administração do Projeto, Desenvolvimento, implementação e teste de software, Análise Formal, Criação de planilha auxiliar de testes.
  * Renato S. Moreira, Validação de dados e experimentos, Code review
